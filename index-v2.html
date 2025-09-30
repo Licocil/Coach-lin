@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Grammar Coach AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        dark: '#1F2937',
+                        light: '#F8FAFC'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .message-user {
+            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+            color: white;
+            border-radius: 20px 20px 5px 20px;
+        }
+        .message-ai {
+            background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+            color: #1F2937;
+            border-radius: 20px 20px 20px 5px;
+            border: 1px solid #E5E7EB;
+        }
+        .section-correction { border-left: 4px solid #3B82F6; background: #EFF6FF; }
+        .section-examples { border-left: 4px solid #10B981; background: #ECFDF5; }
+        .section-synthesis { border-left: 4px solid #8B5CF6; background: #F5F3FF; }
+        .section-elements { border-left: 4px solid #F59E0B; background: #FFFBEB; }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <!-- Header amélioré -->
+        <header class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-white/20">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-gradient-to-r from-primary to-secondary p-3 rounded-xl">
+                        <i class="fas fa-language text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl lg:text-3xl font-bold text-dark">Chinese Grammar Coach AI</h1>
+                        <p class="text-gray-600">Votre assistant personnel pour maîtriser le chinois</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                    <!-- Carte statistiques -->
+                    <div class="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 shadow-sm">
+                        <div class="flex items-center gap-6">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-primary">📚</div>
+                                <div class="text-sm font-semibold text-dark mt-1">Mots</div>
+                                <div id="vocab-count" class="text-lg font-bold text-primary">0</div>
+                            </div>
+                            <div class="h-8 w-px bg-gray-300"></div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-secondary">⚡</div>
+                                <div class="text-sm font-semibold text-dark mt-1">Structures</div>
+                                <div id="grammar-count" class="text-lg font-bold text-secondary">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Carte API Key -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                    <h3 class="font-semibold text-dark mb-3 flex items-center gap-2">
+                        <i class="fas fa-key text-yellow-500"></i>
+                        Configuration API
+                    </h3>
+                    <div class="space-y-3">
+                        <input type="password" id="api-key-input" 
+                               placeholder="Collez votre clé Groq..."
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition">
+                        <button onclick="saveApiKey()" 
+                                class="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white py-3 rounded-xl font-semibold hover:from-yellow-600 hover:to-yellow-700 transition shadow-md">
+                            <i class="fas fa-save mr-2"></i>Sauvegarder la clé
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-3">
+                        Obtenez votre clé gratuite sur 
+                        <a href="https://console.groq.com" target="_blank" class="text-primary hover:underline font-medium">Groq Console</a>
+                    </p>
+                </div>
+
+                <!-- Carte progression -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                    <h3 class="font-semibold text-dark mb-4 flex items-center gap-2">
+                        <i class="fas fa-chart-line text-secondary"></i>
+                        Votre Progression
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Maîtrise du vocabulaire</span>
+                                <span id="vocab-percent">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="vocab-progress" class="bg-primary h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Grammaire acquise</span>
+                                <span id="grammar-percent">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="grammar-progress" class="bg-secondary h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zone principale -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Zone de conversation -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20">
+                    <div id="conversation-history" class="p-6 h-96 overflow-y-auto space-y-4">
+                        <!-- Messages apparaissent ici -->
+                    </div>
+                </div>
+
+                <!-- Zone de saisie améliorée -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                    <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                        <button onclick="showExampleQuestions()" 
+                                class="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-3 rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 transition shadow-md flex items-center justify-center gap-2">
+                            <i class="fas fa-lightbulb"></i>
+                            Exemples de questions
+                        </button>
+                        <button onclick="clearHistory()" 
+                                class="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition shadow-md flex items-center justify-center gap-2">
+                            <i class="fas fa-trash"></i>
+                            Effacer l'historique
+                        </button>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <div class="flex-1 relative">
+                            <textarea id="user-question" 
+                                     placeholder="Écrivez votre phrase en chinois ou posez votre question de grammaire..."
+                                     class="w-full px-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition resize-vertical pr-12"
+                                     rows="3"></textarea>
+                            <div class="absolute right-3 bottom-3 text-gray-400 text-sm">
+                                Ctrl + ↵
+                            </div>
+                        </div>
+                        <button id="submit-btn" onclick="askCoach()" 
+                                class="bg-gradient-to-r from-primary to-blue-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition shadow-lg self-end flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-paper-plane"></i>
+                            Envoyer
+                        </button>
+                    </div>
+                    
+                    <div id="loading" class="hidden mt-4 text-center">
+                        <div class="inline-flex items-center gap-3 bg-blue-50 text-primary px-6 py-3 rounded-xl border border-blue-200">
+                            <i class="fas fa-spinner fa-spin text-lg"></i>
+                            <span class="font-semibold">Coach Lin analyse votre question...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale exemples de questions -->
+    <div id="example-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-auto shadow-2xl border border-white/20">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-dark flex items-center gap-2">
+                    <i class="fas fa-lightbulb text-yellow-500"></i>
+                    Exemples de questions
+                </h3>
+                <button onclick="hideExampleModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div class="p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition group"
+                     onclick="useExample('Comment utiliser la particule 了 ?')">
+                    <div class="font-medium text-dark group-hover:text-primary">Comment utiliser la particule 了 ?</div>
+                    <div class="text-sm text-gray-600 mt-1">Grammaire - Particules</div>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition group"
+                     onclick="useExample('Quelle est la différence entre 不 et 没 ?')">
+                    <div class="font-medium text-dark group-hover:text-primary">Quelle est la différence entre 不 et 没 ?</div>
+                    <div class="text-sm text-gray-600 mt-1">Grammaire - Négation</div>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition group"
+                     onclick="useExample('Comment dire \"je veux apprendre\" en chinois ?')">
+                    <div class="font-medium text-dark group-hover:text-primary">Comment dire "je veux apprendre" en chinois ?</div>
+                    <div class="text-sm text-gray-600 mt-1">Vocabulaire - Verbes</div>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition group"
+                     onclick="useExample('Corrigez ma phrase : 我昨天去商店和我买苹果')">
+                    <div class="font-medium text-dark group-hover:text-primary">Corrigez ma phrase : 我昨天去商店和我买苹果</div>
+                    <div class="text-sm text-gray-600 mt-1">Correction - Phrases</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+        let conversationHistory = JSON.parse(localStorage.getItem('chineseCoachConversation') || '[]');
+        let userStats = JSON.parse(localStorage.getItem('chineseCoachStats') || '{"vocabCount":0,"grammarCount":0}');
+
+        // Prompt système pour Coach Lin
+        const SYSTEM_PROMPT = `TU ES "Coach Lin", un professeur de chinois natif.
+
+RÈGLES ABSOLUES :
+- Réponds UNIQUEMENT en CHINOIS
+- Pour TOUT exemple chinois : écris d'abord les CARACTÈRES, puis le PINYIN entre parenthèses
+- Ne donne JAMAIS de pinyin seul sans caractères chinois
+- Suis CE FORMAT exact :
+
+🎯 CORRECTION & ANALYSE
+[Analyse la question de l'utilisateur et propose une version corrigée de sa phrase, ne reproche jamais à l'utilisateur d'avoir écrit les pinyins sans les tons, mais montre lui la version pinyin avec les tons, et la version avec les charactères chinois]
+
+💡 EXEMPLES PRATIQUES
+[Crée 2-3 exemples qui utilisent SPÉCIFIQUEMENT le mot ou la structure grammaticale de la question utilisateur]
+
+📚 TEXTE DE SYNTHÈSE
+[Crée un court paragraphe de 4-5 phrases qui utilise le mot/structure de la question + d'autres mots courants + d'autres mots ou structures de phrase quue l'utilisateur a mentionné dans ses questions précédentes. Chaque phrase doit avoir les caractères chinois suivis du pinyin entre parenthèses]
+
+🔍 NOUVEAUX ÉLÉMENTS
+[Liste les nouveaux mots/structures de la réponse, en priorité ceux de la question utilisateur]
+
+EXEMPLE si la question porte sur "了" :
+💡 EXEMPLES PRATIQUES
+1. 我吃了饭 (wǒ chī le fàn) - J'ai mangé
+2. 他去了学校 (tā qù le xuéxiào) - Il est allé à l'école
+
+📚 TEXTE DE SYNTHÈSE
+今天我吃了早饭 (jīntiān wǒ chī le zǎofàn)。然后我去了学校 (ránhòu wǒ qù le xuéxiào)。我朋友也来了 (wǒ péngyǒu yě lái le)。我们学习了中文 (wǒmen xuéxí le zhōngwén)。
+
+GARDE les caractères chinois + pinyin ensemble.`;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            displayConversationHistory();
+            checkApiKey();
+            updateProgressBars();
+        });
+
+        // Gestion de la clé API
+        function checkApiKey() {
+            const savedKey = localStorage.getItem('deepseekApiKey');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = '••••••••••••••••';
+            }
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            if (apiKey) {
+                localStorage.setItem('deepseekApiKey', apiKey);
+                alert('Clé API sauvegardée !');
+                document.getElementById('api-key-input').value = '••••••••••••••••';
+            } else {
+                alert('Veuillez entrer une clé API valide');
+            }
+        }
+
+        // Fonction principale pour poser une question
+        async function askCoach() {
+            const questionInput = document.getElementById('user-question');
+            const question = questionInput.value.trim();
+            const loadingElement = document.getElementById('loading');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (!question) {
+                alert('Veuillez entrer une question');
+                return;
+            }
+
+            const apiKey = localStorage.getItem('deepseekApiKey');
+            if (!apiKey) {
+                alert('Veuillez d\'abord configurer votre clé API Groq');
+                return;
+            }
+
+            // État de chargement
+            loadingElement.classList.remove('hidden');
+            submitBtn.disabled = true;
+            questionInput.disabled = true;
+
+            try {
+                // Ajouter la question à l'historique
+                addMessageToHistory('user', question);
+                
+                // ✅ AJOUT DE LA MÉMOIRE
+                const recentHistory = conversationHistory.slice(-4);
+                const historyMessages = recentHistory.map(msg => ({
+                    role: msg.role === 'user' ? 'user' : 'assistant',
+                    content: msg.content
+                }));
+                
+                const messagesWithMemory = [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    ...historyMessages,
+                    { role: 'user', content: question }
+                ];
+                // ✅ FIN AJOUT MÉMOIRE
+
+                // Appeler l'API Groq
+                const response = await fetch(GROQ_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-8b-instant',
+                        messages: messagesWithMemory,
+                        temperature: 0.7,
+                        max_tokens: 2000,
+                        stream: false
+                    })
+                });
+
+                console.log("Status Groq:", response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Erreur Groq:", errorText);
+                    throw new Error(`Erreur API Groq: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log("Réponse Groq:", data);
+                
+                const aiResponse = data.choices[0].message.content;
+
+                // Ajouter la réponse à l'historique
+                addMessageToHistory('assistant', aiResponse);
+                
+                // Mettre à jour les stats
+                updateUserStats(aiResponse);
+                updateProgressBars();
+
+            } catch (error) {
+                console.error('Erreur Groq:', error);
+                addMessageToHistory('assistant', 
+                    `Désolé, une erreur est survenue avec Groq : ${error.message}. Vérifiez votre clé API.`);
+            } finally {
+                // Reset UI
+                loadingElement.classList.add('hidden');
+                submitBtn.disabled = false;
+                questionInput.disabled = false;
+                questionInput.value = '';
+                questionInput.focus();
+            }
+        }
+
+        // Gestion de l'historique
+        function addMessageToHistory(role, content) {
+            const message = {
+                role: role,
+                content: content,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            conversationHistory.push(message);
+            localStorage.setItem('chineseCoachConversation', JSON.stringify(conversationHistory));
+            
+            displayConversationHistory();
+        }
+
+        function displayConversationHistory() {
+            const historyElement = document.getElementById('conversation-history');
+            
+            if (conversationHistory.length === 0) {
+                historyElement.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-comments text-4xl mb-4"></i>
+                        <p>Commencez votre conversation avec Coach Lin !</p>
+                        <p class="text-sm mt-2">Posez vos questions sur la grammaire chinoise.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            historyElement.innerHTML = conversationHistory.map(msg => `
+                <div class="fade-in ${msg.role === 'user' ? 'text-right' : 'text-left'}">
+                    <div class="inline-block max-w-3/4 ${msg.role === 'user' ? 'message-user' : 'message-ai'} p-4 shadow-sm">
+                        <div class="text-sm opacity-75 mb-2 flex items-center gap-2">
+                            <i class="fas ${msg.role === 'user' ? 'fa-user' : 'fa-robot'}"></i>
+                            ${msg.role === 'user' ? 'Vous' : 'Coach Lin'} • ${msg.timestamp}
+                        </div>
+                        <div class="whitespace-pre-wrap">${msg.content}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            historyElement.scrollTop = historyElement.scrollHeight;
+        }
+
+        // Gestion des statistiques
+        function updateUserStats(response) {
+            userStats.vocabCount += Math.floor(Math.random() * 3) + 1;
+            userStats.grammarCount += 1;
+            
+            localStorage.setItem('chineseCoachStats', JSON.stringify(userStats));
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('vocab-count').textContent = userStats.vocabCount;
+            document.getElementById('grammar-count').textContent = userStats.grammarCount;
+        }
+
+        function updateProgressBars() {
+            const vocabPercent = Math.min(userStats.vocabCount * 2, 100);
+            const grammarPercent = Math.min(userStats.grammarCount * 5, 100);
+            
+            document.getElementById('vocab-progress').style.width = vocabPercent + '%';
+            document.getElementById('grammar-progress').style.width = grammarPercent + '%';
+            document.getElementById('vocab-percent').textContent = vocabPercent + '%';
+            document.getElementById('grammar-percent').textContent = grammarPercent + '%';
+        }
+
+        // Gestion des exemples
+        function showExampleQuestions() {
+            document.getElementById('example-modal').classList.remove('hidden');
+        }
+
+        function hideExampleModal() {
+            document.getElementById('example-modal').classList.add('hidden');
+        }
+
+        function useExample(question) {
+            document.getElementById('user-question').value = question;
+            hideExampleModal();
+            document.getElementById('user-question').focus();
+        }
+
+        // Effacer l'historique
+        function clearHistory() {
+            if (confirm('Êtes-vous sûr de vouloir effacer tout l\'historique ?')) {
+                conversationHistory = [];
+                userStats = { vocabCount: 0, grammarCount: 0 };
+                localStorage.removeItem('chineseCoachConversation');
+                localStorage.removeItem('chineseCoachStats');
+                updateStats();
+                updateProgressBars();
+                displayConversationHistory();
+            }
+        }
+
+        // Raccourci clavier
+        document.getElementById('user-question').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                askCoach();
+            }
+        });
+    </script>
+</body>
+</html>
