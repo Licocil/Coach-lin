@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Grammar Coach AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .message-user { background: #3B82F6; color: white; border-radius: 20px 20px 5px 20px; }
+        .message-ai { background: #F8FAFC; color: #1F2937; border-radius: 20px 20px 20px 5px; border: 1px solid #E5E7EB; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-blue-600">Chinese Grammar Coach AI</h1>
+            <p class="text-gray-600">Votre assistant pour le chinois</p>
+        </header>
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <h3 class="font-semibold text-yellow-800 mb-2">🔑 Configuration API Groq</h3>
+            <input type="password" id="api-key-input" placeholder="Collez votre clé Groq..." class="w-full px-3 py-2 border border-yellow-300 rounded mb-2">
+            <button onclick="saveApiKey()" class="bg-yellow-500 text-white px-4 py-2 rounded">Sauvegarder la clé</button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md mb-6">
+            <div id="conversation-history" class="p-6 h-96 overflow-y-auto"></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <textarea id="user-question" placeholder="Votre question..." class="w-full px-3 py-2 border border-gray-300 rounded mb-4" rows="3"></textarea>
+            <button onclick="askCoach()" class="bg-blue-500 text-white px-6 py-2 rounded">Envoyer à Coach Lin</button>
+            <div id="loading" class="hidden mt-4 text-gray-600">Chargement...</div>
+        </div>
+    </div>
+
+    <script>
+        const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+        let conversationHistory = JSON.parse(localStorage.getItem('chineseCoachConversation') || '[]');
+
+        const SYSTEM_PROMPT = `Tu es Coach Lin, professeur de chinois. Réponds en français. Pour les mots chinois, écris les caractères puis le pinyin entre parenthèses.`;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            displayConversationHistory();
+            checkApiKey();
+        });
+
+        function checkApiKey() {
+            const savedKey = localStorage.getItem('deepseekApiKey');
+            if (savedKey) document.getElementById('api-key-input').value = '••••••••••••••••';
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            if (apiKey) {
+                localStorage.setItem('deepseekApiKey', apiKey);
+                alert('Clé sauvegardée !');
+                document.getElementById('api-key-input').value = '••••••••••••••••';
+            }
+        }
+
+        async function askCoach() {
+            const question = document.getElementById('user-question').value.trim();
+            const loadingElement = document.getElementById('loading');
+            const submitBtn = document.querySelector('button');
+
+            if (!question) return alert('Entrez une question');
+            
+            const apiKey = localStorage.getItem('deepseekApiKey');
+            if (!apiKey) return alert('Configurez votre clé API');
+
+            loadingElement.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                addMessageToHistory('user', question);
+                const response = await fetch(GROQ_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-8b-instant',
+                        messages: [
+                            { role: 'system', content: SYSTEM_PROMPT },
+                            { role: 'user', content: question }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    })
+                });
+
+                if (!response.ok) throw new Error('Erreur API: ' + response.status);
+                
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                addMessageToHistory('assistant', aiResponse);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                addMessageToHistory('assistant', 'Erreur: ' + error.message);
+            } finally {
+                loadingElement.classList.add('hidden');
+                submitBtn.disabled = false;
+                document.getElementById('user-question').value = '';
+            }
+        }
+
+        function addMessageToHistory(role, content) {
+            const message = { role, content, timestamp: new Date().toLocaleTimeString() };
+            conversationHistory.push(message);
+            localStorage.setItem('chineseCoachConversation', JSON.stringify(conversationHistory));
+            displayConversationHistory();
+        }
+
+        function displayConversationHistory() {
+            const historyElement = document.getElementById('conversation-history');
+            if (conversationHistory.length === 0) {
+                historyElement.innerHTML = '<div class="text-center text-gray-500 py-8">Commencez la conversation!</div>';
+                return;
+            }
+
+            historyElement.innerHTML = conversationHistory.map(msg => `
+                <div class="mb-4 ${msg.role === 'user' ? 'text-right' : ''}">
+                    <div class="inline-block max-w-3/4 ${msg.role === 'user' ? 'message-user' : 'message-ai'} p-3 rounded">
+                        <div class="text-sm opacity-75">${msg.role === 'user' ? 'Vous' : 'Coach Lin'} • ${msg.timestamp}</div>
+                        <div class="whitespace-pre-wrap">${msg.content}</div>
+                    </div>
+                </div>
+            `).join('');
+            historyElement.scrollTop = historyElement.scrollHeight;
+        }
+    </script>
+</body>
+</html>
